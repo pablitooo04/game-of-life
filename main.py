@@ -4,6 +4,11 @@ except ImportError:
     print("Error: tkinter module not found!")
     exit(1)
 
+try:
+    import numpy as np
+except ImportError:
+    print("Error: numpy module not found!")
+    exit(1)
 
 def auto_loop() -> None:
     """
@@ -26,16 +31,17 @@ class Interface:
         self.size: int = size
         self.edit_mode: bool = False
         self.gap: float = self.size/len(self.matrix)
+        self.canvas = tk.Canvas(width=window_size, height=window_size)
 
         for i in range(len(self.matrix) + 1):
             pos = int(i * self.gap)
-            canvas.create_line(pos, 0, pos, self.size, fill="#C7C6C6")
-            canvas.create_line(0, pos, self.size, pos, fill="#C7C6C6")
+            self.canvas.create_line(pos, 0, pos, self.size, fill="#C7C6C6")
+            self.canvas.create_line(0, pos, self.size, pos, fill="#C7C6C6")
 
         for n_ligne in range(len(self.matrix)):
             for n_case in range(len(self.matrix)):
                 if self.matrix[n_ligne][n_case] != 0:
-                    canvas.create_rectangle(
+                    self.canvas.create_rectangle(
                         int(n_case * self.gap),
                         int(n_ligne * self.gap),
                         int((n_case + 1) * self.gap),
@@ -44,7 +50,7 @@ class Interface:
                         outline="#C7C6C6"
                     )
 
-        canvas.place(x=0, y=0)
+        self.canvas.place(x=0, y=0)
 
     def get_neighbors(self, cell: tuple[int, int])\
             -> tuple[list[tuple], dict[int, int]]:
@@ -114,17 +120,17 @@ class Interface:
 
     def draw_grid(self, current_matrix: list[list[int]]) -> None:
         """Redraw the grid on the canvas based on the given matrix."""
-        canvas.delete("all")
+        self.canvas.delete("all")
         for i in range(len(self.matrix) + 1):
             pos = int(i * self.gap)
-            canvas.create_line(pos, 0, pos, self.size, fill="#C7C6C6")
-            canvas.create_line(0, pos, self.size, pos, fill="#C7C6C6")
+            self.canvas.create_line(pos, 0, pos, self.size, fill="#C7C6C6")
+            self.canvas.create_line(0, pos, self.size, pos, fill="#C7C6C6")
 
         self.new_matrix = current_matrix
         for n_line in range(len(self.new_matrix)):
             for n_col in range(len(self.new_matrix)):
                 if self.new_matrix[n_line][n_col] != 0:
-                    canvas.create_rectangle(
+                    self.canvas.create_rectangle(
                         int(n_col * self.gap),
                         int(n_line * self.gap),
                         int((n_col + 1) * self.gap),
@@ -141,10 +147,10 @@ class Interface:
         if not auto_mode:
             if not I1.edit_mode:
                 self.edit_mode = True
-                canvas.configure(bg="#7799d1")
+                self.canvas.configure(bg="#7799d1")
             else:
                 self.edit_mode = False
-                canvas.configure(bg="#f6f6f6")
+                self.canvas.configure(bg="#f6f6f6")
 
 
 def on_click(event: tk.Event) -> None:
@@ -164,7 +170,7 @@ def on_click(event: tk.Event) -> None:
             )
             I1.matrix[cell[1]][cell[0]] = 1
 
-            canvas.create_rectangle(
+            I1.canvas.create_rectangle(
                 int(cell[0]*I1.gap),
                 int(cell[1]*I1.gap),
                 int((cell[0]+1)*I1.gap),
@@ -185,6 +191,16 @@ def toggle_auto_mode(event: tk.Event):
         if auto_mode:
             auto_loop()
 
+def resize_on_fly(event: tk.Event, interface: Interface) -> None:
+    print(1)
+    if event.widget is not root:
+        return
+
+    interface.size = min(event.width, event.height)
+    interface.gap = interface.size/len(interface.matrix)
+    interface.canvas.configure(width=interface.size, height=interface.size)
+    interface.draw_grid(I1.matrix)
+
 
 if __name__ == "__main__":
     # === Proprities ===
@@ -204,13 +220,11 @@ if __name__ == "__main__":
 
     root = tk.Tk()
     root.geometry(f"{window_size}x{window_size}")
-    root.resizable(False, False)
+    
     root.title("Conway’s Game of Life")
 
     icon = tk.PhotoImage(file="assets/icon.png")
     root.iconphoto(True, icon)
-
-    canvas = tk.Canvas(width=window_size, height=window_size)
 
     matrix = [[0 for _ in range(matrix_size)] for _ in range(matrix_size)]
 
@@ -219,8 +233,9 @@ if __name__ == "__main__":
     # === Binds ===
 
     root.bind("<space>", toggle_auto_mode)
-    canvas.bind("<Button-1>", on_click)
-    canvas.bind("<Button-3>", lambda event: I1.toggle_edit())
+    I1.canvas.bind("<Button-1>", on_click)
+    I1.canvas.bind("<Button-3>", lambda event: I1.toggle_edit())
+    root.bind("<Configure>", lambda event: resize_on_fly(event, I1))
 
     # === Run ===
 
