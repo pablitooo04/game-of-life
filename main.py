@@ -4,14 +4,23 @@ except ImportError:
     print("Error: tkinter module not found!")
     exit(1)
 
+try:
+    import numpy as np
+except ImportError:
+    print("Error: numpy module not found!")
+    exit(1)
+
 
 def auto_loop() -> None:
     """
     Simple function to scroll through generations.
     """
-    if auto_mode:
-        I1.compute_next_generation()
-        root.after(1, auto_loop)
+    try:
+        if auto_mode:
+            I1.compute_next_generation()
+            root.after(1, auto_loop)
+    except KeyboardInterrupt:
+        exit(1)
 
 
 class Interface:
@@ -46,71 +55,49 @@ class Interface:
 
         canvas.place(x=0, y=0)
 
-    def get_neighbors(self, cell: tuple[int, int])\
-            -> tuple[list[tuple], dict[int, int]]:
-        """Return the neighbors of a cell and the count of each type.
+    def get_neighbors(self, cell: tuple[int, int]) -> int:
+        """Return the neighbors count of a cell.
 
         Args:
             C (tuple[int, int]): Coordinates of the target cell (row, col).
 
         Returns:
-            list: A list containing:
-                - a list of neighbor coordinates
-                - a dictionary counting occurrences of each cell type
+            int: the neighbors count of a cell.
         """
-        neighbors: list[tuple[int, int]] = []
-        dict_pop: dict = {0: 0, 1: 0}
+        neighbors = 0
 
-        for addition_x in [-1, 0, 1]:
-            for addition_y in [-1, 0, 1]:
+        for diff_x in [-1, 0, 1]:
+            for diff_y in [-1, 0, 1]:
                 if (
-                    cell[0]+addition_x in range(0, len(self.matrix))
-                    and cell[1] + addition_y in range(0, len(self.matrix))
-                    and (cell[0]+addition_x, cell[1]+addition_y) != cell
+                    cell[0]+diff_x in range(0, len(self.matrix))
+                    and cell[1] + diff_y in range(0, len(self.matrix))
+                    and not (diff_x == 0 and diff_y == 0)
+                    and self.matrix[cell[0] + diff_x][cell[1] + diff_y] == 1
                 ):
-                    neighbors.append((cell[0]+addition_x, cell[1]+addition_y))
+                    neighbors += 1
 
-        for neighbor in neighbors:
-            dict_pop[self.matrix[neighbor[0]][neighbor[1]]] += 1
+        return neighbors
 
-        return (neighbors, dict_pop)
+    def compute_next_generation(self):
 
-    def compute_next_generation(self) -> None:
-        """
-        Compute the next generation of the grid using Conway's rules.
+        grid = np.array(self.matrix, dtype=int)
 
-        Updates the temporary matrix based on the current state, then replaces
-        the main matrix and triggers a redraw of the interface.
-        """
-        self.tmp_matrix: list[list[0]] = [
-            [0 for _ in range(len(self.matrix))]
-            for _ in range(len(self.matrix))
-        ]
+        neighbors = (
+            np.roll(np.roll(grid,  1, 0),  1, 1) +
+            np.roll(np.roll(grid,  1, 0),  0, 1) +
+            np.roll(np.roll(grid,  1, 0), -1, 1) +
+            np.roll(np.roll(grid,  0, 0),  1, 1) +
+            np.roll(np.roll(grid,  0, 0), -1, 1) +
+            np.roll(np.roll(grid, -1, 0),  1, 1) +
+            np.roll(np.roll(grid, -1, 0),  0, 1) +
+            np.roll(np.roll(grid, -1, 0), -1, 1)
+        )
 
-        for lignes in range(len(self.matrix)):
-            for cases in range(len(self.matrix)):
+        new_grid = ((neighbors == 3) | (
+            (grid == 1) & (neighbors == 2))).astype(int)
 
-                neighbors, counts = self.get_neighbors((lignes, cases))
-                alive = counts[1]
-
-                if (
-                    self.matrix[lignes][cases] == 0
-                    and alive == 3
-                ):
-                    self.tmp_matrix[lignes][cases] = 1
-                elif (
-                    self.matrix[lignes][cases] == 1
-                    and alive in [2, 3]
-                ):
-                    self.tmp_matrix[lignes][cases] = 1
-                elif (
-                    self.matrix[lignes][cases] == 1
-                    and alive not in [2, 3]
-                ):
-                    self.tmp_matrix[lignes][cases] = 0
-
-        self.matrix = self.tmp_matrix
-        self.draw_grid(self.tmp_matrix)
+        self.matrix = new_grid.tolist()
+        self.draw_grid(self.matrix)
 
     def draw_grid(self, current_matrix: list[list[int]]) -> None:
         """Redraw the grid on the canvas based on the given matrix."""
@@ -145,6 +132,17 @@ class Interface:
             else:
                 self.edit_mode = False
                 canvas.configure(bg="#f6f6f6")
+
+    def set_random_grid(self):
+        """
+        Set a random grid pressing the 'r' key.
+
+        all cell has a chance of 50% to be alive.
+        """
+
+        self.matrix = np.random.randint(
+            0, 2, (len(self.matrix), len(self.matrix)))
+        self.draw_grid(self.matrix)
 
 
 def on_click(event: tk.Event) -> None:
@@ -196,7 +194,7 @@ if __name__ == "__main__":
 
     auto_mode = False
 
-    matrix_size = 50
+    matrix_size = 250
 
     window_size = 1000
 
@@ -221,6 +219,7 @@ if __name__ == "__main__":
     root.bind("<space>", toggle_auto_mode)
     canvas.bind("<Button-1>", on_click)
     canvas.bind("<Button-3>", lambda event: I1.toggle_edit())
+    root.bind("r", lambda event: I1.set_random_grid())
 
     # === Run ===
 
