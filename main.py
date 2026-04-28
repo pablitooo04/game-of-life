@@ -1,16 +1,25 @@
-try:
-    import tkinter as tk
-except ImportError:
-    print("Error: tkinter module not found!")
-    exit(1)
+import tkinter as tk
 
 try:
     import numpy as np
 except ImportError:
     print("Error: numpy module not found!")
+    print("try to run \"pip install numpy\".")
     exit(1)
 
 from time import time
+from argparse import ArgumentParser
+
+parser = ArgumentParser(description="Conway’s Game of Life")
+
+parser.add_argument(
+    '--size', default=100, type=int, nargs='?',
+    help="Size of the grid (default: 100)"
+)
+parser.add_argument(
+    '--window-size', default=1000, type=int, nargs='?',
+    help="Size of the window (default: 1000)"
+)
 
 
 class Interface:
@@ -68,7 +77,10 @@ class Interface:
         return neighbors
 
     def compute_next_generation(self):
-
+        """
+        Compute the next generation of the grid
+        based on the current state.
+        """
         grid = np.array(self.matrix, dtype=int)
 
         neighbors = (
@@ -151,7 +163,8 @@ class Interface:
         """
 
         self.matrix = np.random.randint(
-            0, 2, (len(self.matrix), len(self.matrix)))
+            0, 2, (len(self.matrix), len(self.matrix))
+        ).tolist()
         self.draw_grid()
 
     def toggle_auto_mode(self, event=None):
@@ -170,6 +183,7 @@ class Interface:
                 15 + 128 + 15, 15, image=self.stop_img, anchor="nw")
 
     def auto_loop(self):
+        """Loop for automatic simulation mode."""
         if not self.auto_mode:
             return
 
@@ -221,10 +235,10 @@ class Interface:
 
 if __name__ == "__main__":
     # === Proprities ===
+    args = parser.parse_args()
 
-    matrix_size = 500
-
-    window_size = 1000
+    matrix_size = args.size
+    window_size = args.window_size
 
     # === Config ===
 
@@ -242,8 +256,8 @@ if __name__ == "__main__":
 
     # === Binds ===
 
-    root.bind("<space>", I1.toggle_auto_mode)
-    root.bind("r", lambda event: I1.set_random_grid())
+    root.bind_all("<space>", I1.toggle_auto_mode)
+    root.bind_all("r", lambda event: I1.set_random_grid())
     I1.canvas.bind("<Button-1>", I1.on_click)
     I1.canvas.bind("<Button-3>", I1.toggle_edit)
 
