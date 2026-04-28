@@ -10,7 +10,7 @@ Despite its very simple rules, it can produce complex and surprising patterns.
 
 ## Preview
 
-[Project preview](assets/screenshot.png)
+![Project preview](assets/screenshot.png)
 
 ## Run the project
 
